@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedHairss — Game Backlog Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f7f4;
+    --surface: #ffffff;
+    --surface2: #f1efe8;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --text: #1a1a18;
+    --text2: #5f5e5a;
+    --text3: #8f8e8a;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --accent: #378ADD;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #181816;
+      --surface: #222220;
+      --surface2: #2c2c2a;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.2);
+      --text: #f0ede6;
+      --text2: #a0a09a;
+      --text3: #666660;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    width: 32px; height: 32px;
+    background: #1b2838;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo svg { width: 20px; height: 20px; fill: white; }
+
+  header h1 { font-size: 16px; font-weight: 500; color: var(--text); }
+  header p { font-size: 12px; color: var(--text3); }
+
+  .header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+  .btn-add {
+    font-size: 12px; padding: 6px 12px;
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border2);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-add:hover { background: var(--surface2); }
+
+  .main { max-width: 960px; margin: 0 auto; padding: 20px 16px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .stat {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+  }
+  .stat-label { font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+  .stat-val { font-size: 20px; font-weight: 500; }
+
+  .controls {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 10px; align-items: center;
+  }
+  .search-wrap { flex: 1; min-width: 180px; position: relative; }
+  .search-wrap svg { position:absolute; left:10px; top:50%; transform:translateY(-50%); width:14px; height:14px; fill:none; stroke:var(--text3); stroke-width:2; }
+  input[type="text"] {
+    width: 100%; padding: 8px 10px 8px 32px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+  }
+  input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(55,138,221,0.15); }
+
+  select {
+    padding: 8px 10px; font-size: 12px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .filter-row {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 12px; align-items: center;
+  }
+  .fbtn {
+    font-size: 11px; padding: 5px 11px;
+    border-radius: 99px; cursor: pointer;
+    border: 0.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    font-family: inherit;
+    transition: all 0.1s;
+  }
+  .fbtn:hover { border-color: var(--border2); color: var(--text); }
+  .fbtn.active { background: var(--surface2); color: var(--text); border-color: var(--border2); font-weight: 500; }
+  .count-lbl { font-size: 11px; color: var(--text3); margin-left: auto; }
+
+  .game-list { display: flex; flex-direction: column; gap: 4px; }
+
+  .gc {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 9px 12px;
+    display: flex; align-items: center; gap: 10px;
+    transition: border-color 0.1s;
+  }
+  .gc:hover { border-color: var(--border2); }
+  .gc.is-new { border-color: var(--accent); }
+
+  .bar-bg { width: 56px; height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+  .bar-fill { height: 100%; border-radius: 2px; }
+
+  .gname {
+    font-size: 13px; font-weight: 500; color: var(--text);
+    flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tag-new {
+    font-size: 9px; background: #E6F1FB; color: #185FA5;
+    padding: 1px 5px; border-radius: 99px; margin-left: 5px;
+    font-weight: 500; vertical-align: middle; flex-shrink: 0;
+  }
+  .ghrs { font-size: 11px; color: var(--text2); white-space: nowrap; min-width: 34px; text-align: right; flex-shrink: 0; }
+
+  .sbadge {
+    font-size: 10px; padding: 3px 9px;
+    border-radius: 99px; cursor: pointer;
+    white-space: nowrap; font-weight: 500;
+    border: none; flex-shrink: 0;
+    font-family: inherit;
+    transition: opacity 0.1s;
+  }
+  .sbadge:hover { opacity: 0.8; }
+  .s-unplayed  { background: #F1EFE8; color: #5F5E5A; }
+  .s-backlog   { background: #E6F1FB; color: #0C447C; }
+  .s-playing   { background: #EAF3DE; color: #3B6D11; }
+  .s-completed { background: #EEEDFE; color: #3C3489; }
+  .s-dropped   { background: #FCEBEB; color: #A32D2D; }
+  .s-shelved   { background: #FAEEDA; color: #854F0B; }
+
+  .page-row {
+    display: flex; gap: 6px; align-items: center;
+    justify-content: center; margin-top: 16px; flex-wrap: wrap;
+  }
+  .pbtn {
+    font-size: 12px; padding: 5px 11px;
+    border-radius: var(--radius); cursor: pointer;
+    border: 0.5px solid var(--border);
+    background: var(--surface); color: var(--text);
+    font-family: inherit;
+  }
+  .pbtn:disabled { opacity: 0.35; cursor: default; }
+  .pbtn.active { background: var(--surface2); font-weight: 500; border-color: var(--border2); }
+  .page-info { font-size: 11px; color: var(--text2); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 100; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border2);
+    padding: 20px 24px;
+    width: 360px; max-width: 90vw;
+  }
+  .modal h2 { font-size: 15px; font-weight: 500; margin-bottom: 14px; }
+  .modal label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 4px; }
+  .modal input[type="text"], .modal input[type="number"] { padding: 8px 10px; margin-bottom: 12px; }
+  .modal input[type="number"] { width: 100%; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); font-size: 13px; font-family: inherit; outline: none; }
+  .modal input[type="number"]:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(55,138,221,0.15); }
+  .modal select { width: 100%; margin-bottom: 16px; }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-cancel { padding: 7px 14px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--surface); color: var(--text); cursor: pointer; font-family: inherit; font-size: 13px; }
+  .btn-save { padding: 7px 14px; border-radius: var(--radius); border: none; background: var(--accent); color: white; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; }
+
+  footer {
+    text-align: center; padding: 20px;
+    font-size: 11px; color: var(--text3);
+    border-top: 0.5px solid var(--border);
+    margin-top: 24px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Game Backlog Tracker</h1>
+    <p id="header-sub">RedHairss · Steam Library</p>
+  </div>
+  <div class="header-right">
+    <button class="btn-add" onclick="openAddModal()">+ Add game</button>
+    <button class="btn-add" onclick="exportCSV()">Export CSV</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="stats" id="stats"></div>
+  <div class="controls">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search games…" id="search" />
+    </div>
+    <select id="sort">
+      <option value="hours-desc">Most played</option>
+      <option value="hours-asc">Least played</option>
+      <option value="name-asc">A → Z</option>
+      <option value="name-desc">Z → A</option>
+    </select>
+  </div>
+  <div class="filter-row" id="filter-row"></div>
+  <div class="game-list" id="game-list"></div>
+  <div class="page-row" id="page-row"></div>
+</div>
+
+<footer>Statuses are saved automatically in your browser · <span id="game-count"></span> games tracked</footer>
+
+<!-- Add Game Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>Add a game</h2>
+    <label>Game name</label>
+    <input type="text" id="new-name" placeholder="e.g. Elden Ring" style="width:100%" />
+    <div style="display:flex;gap:10px;">
+      <div style="flex:1">
+        <label>Hours played</label>
+        <input type="number" id="new-hours" placeholder="0" min="0" step="0.1" style="width:100%;margin-bottom:12px" />
+      </div>
+    </div>
+    <label>Status</label>
+    <select id="new-status">
+      <option value="unplayed">Unplayed</option>
+      <option value="backlog">Backlog</option>
+      <option value="playing" selected>Playing</option>
+      <option value="completed">Completed</option>
+      <option value="dropped">Dropped</option>
+      <option value="shelved">Shelved</option>
+    </select>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="addGame()">Add game</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STATUSES = ['unplayed','backlog','playing','completed','dropped','shelved'];
+const S_LABELS = {unplayed:'Unplayed',backlog:'Backlog',playing:'Playing',completed:'Completed',dropped:'Dropped',shelved:'Shelved'};
+const PAGE_SIZE = 50;
+const STORAGE_KEY = 'redhairss_backlog_v1';
+
+const GAMES_DEFAULT = [
+["Star Citizen",0,"playing",true],
+["FINAL FANTASY XIV Online",405.4,"playing"],
+["Marvel Heroes Omega",380.9,"playing"],
+["Monster Hunter: World",186.4,"shelved"],
+["Champions Online",149.1,"shelved"],
+["DC Universe Online",118.5,"shelved"],
+["RIFT",111.6,"playing"],
+["VRChat",105.0,"playing"],
+["The Sims™ 4",99.5,"shelved"],
+["Wallpaper Engine",96.4,"playing"],
+["Monster Hunter Wilds",83.9,"playing"],
+["MONSTER HUNTER RISE",75.1,"shelved"],
+["Black Desert",74.2,"playing"],
+["The Elder Scrolls V: Skyrim",66.7,"shelved"],
+["The Lord of the Rings Online™",66.7,"playing"],
+["WildStar",65.8,"dropped"],
+["Lost Ark",54.9,"shelved"],
+["American Truck Simulator",52.8,"playing"],
+["Red Dead Redemption 2",52.6,"playing"],
+["Marvel's Avengers - The Definitive Edition",49.6,"dropped"],
+["Darksiders II",45.9,"dropped"],
+["7 Days to Die",41.8,"shelved"],
+["Defiance",40.7,"dropped"],
+["Phantasy Star Online 2 New Genesis",39.6,"shelved"],
+["The Elder Scrolls Online",37.2,"shelved"],
+["Dead Island",37.1,"shelved"],
+["Vindictus",36.5,"shelved"],
+["Tom Clancy's Splinter Cell Blacklist",36.0,"shelved"],
+["EverQuest II",35.3,"shelved"],
+["Closers",34.8,"shelved"],
+["Dungeon Fighter Online",34.1,"shelved"],
+["Shakes and Fidget",33.4,"shelved"],
+["Tabletop Simulator",32.7,"shelved"],
+["Tap Tap Infinity",30.9,"shelved"],
+["TERA",30.8,"dropped"],
+["Star Trek Online",30.4,"shelved"],
+["Terraria",29.9,"shelved"],
+["Borderlands 2",29.9,"shelved"],
+["Gotham Knights",29.6,"shelved"],
+["Lords Of The Fallen",29.6,"shelved"],
+["Batman™: Arkham Origins",29.2,"shelved"],
+["Torchlight II",29.1,"completed"],
+["L.A. Noire",29.0,"shelved"],
+["DARK SOULS™: Prepare To Die Edition",28.9,"shelved"],
+["OUTRIDERS",28.4,"shelved"],
+["Kingdoms of Amalur: Reckoning™",28.3,"shelved"],
+["The Witcher 2: Assassins of Kings Enhanced Edition",28.0,"shelved"],
+["Secret World Legends",28.0,"shelved"],
+["Marvel's Midnight Suns",27.5,"shelved"],
+["STAR OCEAN THE DIVINE FORCE",27.3,"shelved"],
+["Middle-earth™: Shadow of Mordor™",26.6,"shelved"],
+["Cyberpunk 2077",26.5,"shelved"],
+["RPG Maker MZ",25.9,"shelved"],
+["Warframe",25.9,"shelved"],
+["SCARLET NEXUS",25.7,"shelved"],
+["Hogwarts Legacy",25.6,"shelved"],
+["STAR OCEAN™ - THE LAST HOPE™ - 4K & Full HD Remaster",25.2,"shelved"],
+["Dungeons & Dragons Online®",24.0,"shelved"],
+["The Sims™ 3",23.3,"shelved"],
+["Dragon Age: Origins - Ultimate Edition",23.2,"shelved"],
+["Resident Evil 5",22.9,"shelved"],
+["RuneScape",22.7,"shelved"],
+["Darksiders",22.6,"shelved"],
+["DRAGON QUEST® XI: Echoes of an Elusive Age™",22.6,"shelved"],
+["Batman™: Arkham Knight",21.8,"shelved"],
+["Borderlands GOTY",21.1,"shelved"],
+["Stardew Valley",21.0,"shelved"],
+["Ragnarok Online 2",20.9,"dropped"],
+["Barony",20.6,"shelved"],
+["Tiny Tina's Wonderlands",20.2,"shelved"],
+["Dead Space 2",19.6,"shelved"],
+["Saints Row: The Third",18.5,"shelved"],
+["STAR WARS™: The Old Republic™",18.4,"shelved"],
+["Guild Wars® Reforged",18.3,"shelved"],
+["DmC Devil May Cry",18.3,"shelved"],
+["Digimon Story Time Stranger",18.2,"shelved"],
+["Crysis 2",18.1,"shelved"],
+["EVE Online",17.6,"shelved"],
+["The Lord of the Rings: War in the North",17.5,"shelved"],
+["The Elder Scrolls IV: Oblivion GOTY Edition",17.5,"shelved"],
+["SoulWorker",17.3,"dropped"],
+["Batman: Arkham City GOTY",17.2,"shelved"],
+["Palworld",17.1,"shelved"],
+["Portal 2",17.1,"completed"],
+["Resident Evil 6",16.9,"shelved"],
+["Dragon Age II",16.8,"shelved"],
+["ArcheAge: Unchained",16.8,"dropped"],
+["Borderlands® 4",16.4,"shelved"],
+["WILD HEARTS™",16.2,"shelved"],
+["Mabinogi",16.1,"shelved"],
+["Fable III",16.0,"shelved"],
+["Kritika:REBOOT",15.7,"dropped"],
+["Neverwinter",15.7,"shelved"],
+["ARK: Survival Evolved",15.6,"shelved"],
+["Sleeping Dogs™",15.6,"shelved"],
+["New World: Aeternum",15.5,"dropped"],
+["ROSE Online",15.1,"dropped"],
+["Crimson Desert",14.8,"shelved"],
+["DRAGON BALL XENOVERSE",14.7,"shelved"],
+["Baldur's Gate 3",14.6,"shelved"],
+["Duet Night Abyss",14.6,"shelved"],
+["Dungeon Siege III",14.5,"shelved"],
+["DRAGON BALL Z: KAKAROT",14.5,"shelved"],
+["WAKFU",14.3,"shelved"],
+["Grand Theft Auto V Legacy",14.2,"shelved"],
+["Fable Anniversary",14.1,"shelved"],
+["Tom Clancy's The Division",14.1,"shelved"],
+["Tales of ARISE",14.0,"shelved"],
+["Far Cry® 3",13.5,"shelved"],
+["Injustice: Gods Among Us Ultimate Edition",13.4,"shelved"],
+["Deadpool",13.4,"shelved"],
+["Dragon Nest",13.1,"dropped"],
+["RAGE",12.8,"shelved"],
+["Aseprite",12.7,"shelved"],
+["NARUTO SHIPPUDEN: Ultimate Ninja STORM 4",12.4,"shelved"],
+["DARK SOULS™ II",12.1,"shelved"],
+["Gunfire Reborn",11.8,"shelved"],
+["Necesse",11.8,"shelved"],
+["Medal of Honor Single Player",11.8,"shelved"],
+["Batman: Arkham Asylum GOTY Edition",11.7,"completed"],
+["Castlevania: Lords of Shadow 2",11.6,"shelved"],
+["Outward",11.4,"shelved"],
+["Last Epoch",11.4,"shelved"],
+["Ryse: Son of Rome",11.3,"shelved"],
+["La Tale",11.2,"dropped"],
+["MU Legend",11.2,"dropped"],
+["AdVenture Capitalist",11.2,"shelved"],
+["BRINK",11.1,"dropped"],
+["Warlords Battlecry III",11.0,"shelved"],
+["Mortal Kombat X",10.9,"shelved"],
+["Dungeon Defenders",10.5,"shelved"],
+["Dota 2",10.4,"shelved"],
+["Saints Row IV",10.3,"shelved"],
+["Yakuza 0",10.0,"shelved"],
+["NEStalgia",9.9,"shelved"],
+["Path of Exile 2",9.7,"shelved"],
+["Remnant: From the Ashes",9.5,"shelved"],
+["Cogs",9.5,"shelved"],
+["inZOI",9.5,"shelved"],
+["F.E.A.R. 3",9.4,"shelved"],
+["Destiny 2",9.3,"shelved"],
+["Dispatch",9.3,"shelved"],
+["God of War",9.3,"shelved"],
+["DOOM Eternal",9.3,"shelved"],
+["Ultra Street Fighter IV",9.1,"shelved"],
+["Warhammer 40,000: Space Marine - Anniversary Edition",9.1,"shelved"],
+["Darkspore",8.8,"dropped"],
+["Grim Dawn",8.8,"shelved"],
+["Assassin's Creed Syndicate",8.8,"shelved"],
+["Remember Me",8.7,"shelved"],
+["MOBIUS FINAL FANTASY",8.6,"dropped"],
+["NARUTO SHIPPUDEN: Ultimate Ninja STORM 3 Full Burst",8.5,"shelved"],
+["Mafia: Definitive Edition",8.4,"shelved"],
+["The Incredible Adventures of Van Helsing",8.4,"shelved"],
+["Dishonored",8.3,"shelved"],
+["The First Descendant",8.2,"shelved"],
+["Fallout: New Vegas",8.1,"shelved"],
+["Magicka",8.1,"shelved"],
+["Dungeonborne",8.1,"shelved"],
+["The Jackbox Party Pack 5",8.1,"shelved"],
+["STAR WARS™ Battlefront™ II",8.0,"shelved"],
+["Watch_Dogs",8.0,"shelved"],
+["Homefront",7.8,"shelved"],
+["ELYON",7.8,"dropped"],
+["Yakuza: Like a Dragon",7.7,"shelved"],
+["BioShock Infinite",7.6,"shelved"],
+["Vampyr",7.6,"shelved"],
+["Trove",7.5,"dropped"],
+["Age of Conan: Unchained",7.3,"dropped"],
+["The Darkness II",7.3,"shelved"],
+["Tom Clancy's Splinter Cell: Conviction",7.2,"shelved"],
+["Starbound",7.2,"shelved"],
+["Phasmophobia",7.2,"shelved"],
+["Mass Effect™: Andromeda",7.1,"shelved"],
+["Castlevania: Lords of Shadow - Ultimate Edition",7.1,"shelved"],
+["Lost Planet 2",7.0,"shelved"],
+["Warhammer: Vermintide 2",7.0,"shelved"],
+["DRAGON QUEST XI S: Definitive Edition",6.9,"shelved"],
+["FINAL FANTASY XV WINDOWS EDITION",6.8,"shelved"],
+["Max Payne 3",6.8,"shelved"],
+["TEKKEN 7",6.8,"shelved"],
+["METAL GEAR RISING: REVENGEANCE",6.7,"shelved"],
+["Astrox Imperium",6.7,"shelved"],
+["Assassin's Creed Brotherhood",6.7,"shelved"],
+["Tom Clancy's Rainbow Six: Vegas 2",6.6,"shelved"],
+["Spider-Man: Shattered Dimensions",6.6,"shelved"],
+["Fairy Fencer F",6.5,"shelved"],
+["Aliens vs. Predator",6.5,"shelved"],
+["Titan Quest Anniversary Edition",6.5,"shelved"],
+["Tom Clancy's Rainbow Six Siege",6.5,"shelved"],
+["FINAL FANTASY XIII",6.4,"shelved"],
+["Red Faction: Armageddon",6.4,"shelved"],
+["Risk of Rain 2",6.4,"shelved"],
+["The Jackbox Party Pack 6",6.2,"shelved"],
+["BABYLON'S FALL",6.2,"dropped"],
+["Cooking Simulator",6.1,"shelved"],
+["Mortal Kombat Komplete Edition",6.1,"shelved"],
+["South Park™: The Stick of Truth™",6.0,"shelved"],
+["Black Myth: Wukong",6.0,"shelved"],
+["Just Cause 2",6.0,"shelved"],
+["Orcs Must Die! 2",5.9,"shelved"],
+["Sun Haven",5.9,"shelved"],
+["Bound By Flame",5.8,"shelved"],
+["Cities: Skylines",5.7,"shelved"],
+["Left 4 Dead 2",5.7,"shelved"],
+["Saints Row 2",5.7,"shelved"],
+["Pillars of Eternity",5.6,"shelved"],
+["Final Fantasy III (3D Remake)",5.6,"shelved"],
+["Middle-earth™: Shadow of War™",5.6,"shelved"],
+["Liar's Bar",5.6,"shelved"],
+["Warhammer 40,000: Inquisitor - Martyr",5.6,"shelved"],
+["Audiosurf",5.5,"shelved"],
+["FINAL FANTASY VIII",5.5,"shelved"],
+["STAR WARS Jedi: Fallen Order™",5.5,"shelved"],
+["Assassin's Creed Odyssey",5.4,"shelved"],
+["Just Cause 3",5.4,"shelved"],
+["Skull and Bones",5.2,"shelved"],
+["PlanetSide 2",5.2,"dropped"],
+["XCOM: Enemy Unknown",5.1,"shelved"],
+["Grand Theft Auto IV: The Complete Edition",5.1,"shelved"],
+["Digimon Story Cyber Sleuth: Complete Edition",5.0,"shelved"],
+["Among Us",5.0,"shelved"],
+["Assassin's Creed IV Black Flag",4.9,"shelved"],
+["KurtzPel",4.9,"dropped"],
+["Wanderlust: Rebirth",4.8,"shelved"],
+["Street Fighter X Tekken",4.8,"shelved"],
+["Mafia II (Classic)",4.7,"shelved"],
+["RetroArch",4.7,"shelved"],
+["Baldur's Gate: Enhanced Edition",4.7,"shelved"],
+["Elite Dangerous",4.6,"shelved"],
+["Watch_Dogs 2",4.6,"shelved"],
+["The Elder Scrolls V: Skyrim Special Edition",4.6,"shelved"],
+["Rise of the Ronin",4.6,"shelved"],
+["Dead Rising 3",4.6,"shelved"],
+["Fight The Dragon",4.5,"shelved"],
+["RuneScape: Dragonwilds",4.4,"shelved"],
+["The Wolf Among Us",4.4,"shelved"],
+["FINAL FANTASY X/X-2 HD Remaster",4.4,"shelved"],
+["Portal",4.3,"completed"],
+["Monster Hunter Stories 2: Wings of Ruin",4.3,"shelved"],
+["Total War: WARHAMMER II",4.3,"shelved"],
+["The Witcher 3: Wild Hunt",4.2,"shelved"],
+["DYNASTY WARRIORS 8: Xtreme Legends Complete Edition",4.2,"shelved"],
+["BIOMUTANT",4.2,"shelved"],
+["FINAL FANTASY® XI: Ultimate Collection Seekers Edition NA",4.2,"shelved"],
+["Torchlight",4.2,"shelved"],
+["Dragon's Dogma: Dark Arisen",4.1,"shelved"],
+["Wolfenstein: The New Order",4.1,"shelved"],
+["Mad Games Tycoon",4.0,"shelved"],
+["Tom Clancy's Splinter Cell: Chaos Theory",4.0,"shelved"],
+["Mass Effect™ Legendary Edition",4.0,"shelved"],
+["GOD EATER 3",3.9,"shelved"],
+["MineMogul",3.9,"shelved"],
+["Clicker Heroes",3.9,"shelved"],
+["Victor Vran",3.9,"shelved"],
+["Call of Duty: Black Ops",3.8,"shelved"],
+["Tales of Zestiria",3.7,"shelved"],
+["Vampire: The Masquerade - Bloodlines",3.7,"shelved"],
+["Path of Exile",3.7,"shelved"],
+["Dragon Age™ Inquisition",3.7,"shelved"],
+["Rise of the Tomb Raider",3.6,"shelved"],
+["Binary Domain",3.6,"shelved"],
+["Soulstone Survivors",3.6,"shelved"],
+["Titan Quest II",3.6,"shelved"],
+["Call of Duty: Advanced Warfare",3.6,"shelved"],
+["WARRIORS OROCHI 4",3.5,"shelved"],
+["PAYDAY: The Heist",3.5,"shelved"],
+["Counter-Strike: Source",3.5,"shelved"],
+["Nightingale",3.5,"shelved"],
+["Fallout 4",3.5,"shelved"],
+["Wuthering Waves",3.4,"shelved"],
+["Secrets of Grindea",3.4,"shelved"],
+["Sniper Elite 3",3.4,"shelved"],
+["Batman: Arkham City™",3.4,"shelved"],
+["Arma 2",3.4,"shelved"],
+["Duke Nukem Forever",3.4,"shelved"],
+["Sacred 3",3.4,"shelved"],
+["Rogue Legacy",3.4,"shelved"],
+["Crea",3.3,"shelved"],
+["Far Cry 2",3.3,"shelved"],
+["Agents of Mayhem",3.3,"shelved"],
+["Bayonetta",3.3,"shelved"],
+["Wolcen: Lords of Mayhem",3.3,"shelved"],
+["Ys: The Oath in Felghana",3.3,"shelved"],
+["Punch Club",3.3,"shelved"],
+["RAGE 2",3.3,"shelved"],
+["Dead Rising 2",3.3,"shelved"],
+["Sword Art Online: Hollow Realization Deluxe Edition",3.2,"shelved"],
+["Castle Crashers",3.2,"shelved"],
+["Dishonored 2",3.2,"shelved"],
+["ARMORED CORE™ VI FIRES OF RUBICON™",3.2,"shelved"],
+["Horizon Zero Dawn™ Complete Edition",3.2,"shelved"],
+["Crysis",3.2,"shelved"],
+["Kingdom Come: Deliverance",3.1,"shelved"],
+["Bellwright",3.1,"shelved"],
+["Dying Light",3.1,"shelved"],
+["Sekiro™: Shadows Die Twice",3.1,"shelved"],
+["Mafia II: Definitive Edition",3.1,"shelved"],
+["Hero Siege",3.1,"shelved"],
+["SOULCALIBUR VI",3.0,"shelved"],
+["Ni no Kuni Wrath of the White Witch™ Remastered",3.0,"shelved"],
+["Prison Architect",3.0,"shelved"],
+["Call of Duty: Modern Warfare 2 (2009)",3.0,"shelved"],
+["Game Dev Tycoon",2.9,"shelved"],
+["Kingdoms of Amalur: Re-Reckoning",2.9,"shelved"],
+["Dark Messiah of Might & Magic Single Player",2.9,"shelved"],
+["Marvel's Spider-Man Remastered",2.9,"shelved"],
+["Call of Duty: Black Ops II",2.9,"shelved"],
+["Recettear: An Item Shop's Tale",2.8,"shelved"],
+["The Haunted: Hells Reach",2.8,"shelved"],
+["PC Building Simulator",2.8,"shelved"],
+["Prey",2.7,"shelved"],
+["Portal Knights",2.7,"shelved"],
+["ELDEN RING",2.7,"shelved"],
+["Don't Starve Together",2.7,"shelved"],
+["Evil West",2.6,"shelved"],
+["Youtubers Life",2.6,"shelved"],
+["Mortal Kombat 11",2.5,"shelved"],
+["Hitman: Absolution",2.5,"shelved"],
+["Ghostwire: Tokyo",2.4,"shelved"],
+["Deus Ex: Mankind Divided™",2.4,"shelved"],
+["NieR Replicant",2.4,"shelved"],
+["SAMURAI WARRIORS 4-II",2.4,"shelved"],
+["The Isle",2.3,"shelved"],
+["Killer is Dead",2.3,"shelved"],
+["Need for Speed™ Heat",2.3,"shelved"],
+["Slime Rancher",2.3,"shelved"],
+["Garry's Mod",2.3,"shelved"],
+["Kingdoms and Castles",2.2,"shelved"],
+["TCG Card Shop Simulator",2.2,"shelved"],
+["Far Cry 5",2.2,"shelved"],
+["Warhammer 40,000: Space Marine 2",2.2,"shelved"],
+["Attack on Titan / A.O.T. Wings of Freedom",2.2,"shelved"],
+["RPG Maker VX Ace",2.2,"shelved"],
+["DRAGON BALL XENOVERSE 2",2.1,"shelved"],
+["Devil May Cry 4",2.1,"shelved"],
+["SMITE",2.1,"shelved"],
+["Epic Battle Fantasy 4",2.0,"shelved"],
+["Star Trucker",2.0,"shelved"],
+["DOOM 3",2.0,"shelved"],
+["Blender",1.9,"shelved"],
+["GRANDIA II HD Remaster",1.9,"shelved"],
+["Two Point Hospital",1.9,"shelved"],
+["FOR HONOR",1.9,"shelved"],
+["Starpoint Gemini Warlords",1.9,"shelved"],
+["Detroit: Become Human",1.8,"shelved"],
+["EVERSPACE™ 2",1.8,"shelved"],
+["Call of Juarez Gunslinger",1.8,"shelved"],
+["Devil May Cry 5",1.8,"shelved"],
+["Suicide Squad: Kill the Justice League",1.8,"dropped"],
+["Dead Space (2008)",1.8,"shelved"],
+["Monster Care Simulator",1.8,"shelved"],
+["Albion Online",1.7,"shelved"],
+["FINAL FANTASY TYPE-0 HD",1.7,"shelved"],
+["Tomb Raider",1.7,"shelved"],
+["The Callisto Protocol",1.7,"shelved"],
+["Prototype",1.7,"shelved"],
+["Quake 4",1.7,"shelved"],
+["FINAL FANTASY XIII-2",1.7,"shelved"],
+["Fable - The Lost Chapters",1.7,"shelved"],
+["GreedFall",1.6,"shelved"],
+["Far Cry Primal",1.6,"shelved"],
+["PAYDAY 2",1.6,"shelved"],
+["The Crew 2",1.6,"shelved"],
+["The Surge",1.6,"shelved"],
+["LIGHTNING RETURNS: FINAL FANTASY XIII",1.6,"shelved"],
+["PROTOTYPE 2",1.6,"shelved"],
+["Shadow of the Tomb Raider",1.6,"shelved"],
+["Dungeon Siege",1.6,"shelved"],
+["Conan Exiles",1.5,"shelved"],
+["Super Meat Boy",1.5,"shelved"],
+["Ni no Kuni™ II: Revenant Kingdom",1.5,"shelved"],
+["Apex Legends",1.5,"shelved"],
+["Risen 2 - Dark Waters",1.5,"shelved"],
+["DARK SOULS™ III",1.4,"shelved"],
+["Spec Ops: The Line",1.4,"shelved"],
+["Kerbal Space Program",1.4,"shelved"],
+["DEAD OR ALIVE 6",1.4,"shelved"],
+["Assassin's Creed Revelations",1.4,"shelved"],
+["Witchfire",1.4,"shelved"],
+["Warhammer 40,000: Rogue Trader",1.2,"shelved"],
+["The Jackbox Party Pack",1.2,"shelved"],
+["Shadow Warrior",1.2,"shelved"],
+["Bastion",1.2,"shelved"],
+["Amnesia: The Dark Descent",1.2,"shelved"],
+["Trine 2",1.2,"shelved"],
+["Team Fortress 2",1.2,"shelved"],
+["Fallout 76",1.1,"shelved"],
+["Rebel Galaxy",1.1,"shelved"],
+["Alan Wake",1.1,"shelved"],
+["Valheim",1.1,"shelved"],
+["STAR WARS™ Jedi Knight: Jedi Academy™",1.1,"shelved"],
+["Assassin's Creed II",1.1,"shelved"],
+["BioShock 2",1.1,"shelved"],
+["Nexomon: Extinction",1.0,"shelved"],
+["DARK",1.0,"shelved"],
+["Ghostbusters: Spirits Unleashed Ecto Edition",0.97,"shelved"],
+["Dead by Daylight",0.97,"shelved"],
+["Chivalry: Medieval Warfare",0.97,"shelved"],
+["Arma 2: Operation Arrowhead",0.97,"shelved"],
+["WORLD OF FINAL FANTASY",0.95,"shelved"],
+["One Finger Death Punch",0.95,"shelved"],
+["Kenshi",0.95,"shelved"],
+["BERSERK and the Band of the Hawk",0.93,"shelved"],
+["LEGO® Worlds",0.93,"shelved"],
+["Sword Art Online: Fatal Bullet",0.92,"shelved"],
+["Toukiden 2",0.92,"shelved"],
+["Absolver",0.92,"shelved"],
+["DOOM 3: BFG Edition",0.92,"shelved"],
+["Splitgate",0.9,"shelved"],
+["Resident Evil Revelations 2",0.9,"shelved"],
+["Quest of Dungeons",0.9,"shelved"],
+["Sanctum",0.9,"shelved"],
+["The First Templar",0.88,"shelved"],
+["NieR:Automata™",0.87,"shelved"],
+["Darksiders Warmastered Edition",0.87,"shelved"],
+["Mad Max",0.85,"shelved"],
+["STAR WARS™ Knights of the Old Republic™ II",0.85,"shelved"],
+["Sonic Adventure DX",0.85,"shelved"],
+["My Time at Portia",0.83,"shelved"],
+["Tom Clancy's Ghost Recon Future Soldier",0.83,"shelved"],
+["Idle Champions of the Forgotten Realms",0.82,"shelved"],
+["Realm Grinder",0.82,"shelved"],
+["Serious Sam 3: BFE",0.82,"shelved"],
+["Dead Space",0.8,"shelved"],
+["Hacknet",0.8,"shelved"],
+["BioShock Remastered",0.78,"shelved"],
+["Wolfenstein II: The New Colossus",0.77,"shelved"],
+["LEGO® MARVEL Super Heroes",0.77,"shelved"],
+["Tropico 5",0.77,"shelved"],
+["Killing Floor",0.77,"shelved"],
+["Nioh 2 – The Complete Edition",0.75,"shelved"],
+["Indivisible",0.73,"shelved"],
+["Dead Island Definitive Edition",0.73,"shelved"],
+["STAR WARS™ Knights of the Old Republic™",0.73,"shelved"],
+["Days Gone",0.72,"shelved"],
+["ELEX",0.72,"shelved"],
+["Tales from the Borderlands",0.72,"shelved"],
+["For The King II",0.7,"shelved"],
+["Chorus",0.7,"shelved"],
+["Enderal: Forgotten Stories",0.68,"shelved"],
+["Trine",0.68,"shelved"],
+["Total War: WARHAMMER III",0.67,"shelved"],
+["ONE PIECE: PIRATE WARRIORS 4",0.67,"shelved"],
+["FINAL FANTASY IX",0.67,"shelved"],
+["GUN",0.65,"shelved"],
+["Resident Evil 3",0.6,"shelved"],
+["Pillars of Eternity II: Deadfire",0.58,"shelved"],
+["The Walking Dead",0.18,"shelved"],
+["Life is Strange™",0.23,"shelved"],
+["Resident Evil Village",0.45,"shelved"],
+["Fields of Mistria",0.53,"shelved"],
+["Far Cry 4",0.53,"shelved"],
+["Resident Evil 7 Biohazard",0.05,"shelved"],
+["Titanfall® 2",0.05,"shelved"],
+["Darksiders III",0.05,"shelved"]
+];
+
+// Load from localStorage or use defaults
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return GAMES_DEFAULT.map(([name, hours, status, isNew]) => ({ name, hours: hours||0, status: status||'unplayed', isNew: !!isNew }));
+}
+
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+let data = loadData();
+const maxHours = Math.max(...data.map(g=>g.hours), 1);
+let filterStatus = 'all';
+let currentPage = 1;
+
+function cycle(name) {
+  const g = data.find(x=>x.name===name);
+  if (!g) return;
+  g.status = STATUSES[(STATUSES.indexOf(g.status)+1) % STATUSES.length];
+  saveData(); render();
+}
+
+function getFiltered() {
+  let list = [...data];
+  const q = document.getElementById('search').value.toLowerCase();
+  if (q) list = list.filter(g => g.name.toLowerCase().includes(q));
+  if (filterStatus !== 'all') list = list.filter(g => g.status === filterStatus);
+  const sort = document.getElementById('sort').value;
+  if (sort==='hours-desc') list.sort((a,b)=>b.hours-a.hours);
+  else if (sort==='hours-asc') list.sort((a,b)=>a.hours-b.hours);
+  else if (sort==='name-asc') list.sort((a,b)=>a.name.localeCompare(b.name));
+  else list.sort((a,b)=>b.name.localeCompare(a.name));
+  return list;
+}
+
+function barColor(h) {
+  if (h>=50) return '#1D9E75'; if (h>=10) return '#378ADD'; if (h>=1) return '#BA7517'; return '#B4B2A9';
+}
+
+function fmtHours(h) {
+  if (!h || h===0) return '—';
+  if (h < 1) return Math.round(h*60)+'m';
+  return (h >= 10 ? Math.round(h) : h.toFixed(1)) + 'h';
+}
+
+function render() {
+  const list = getFiltered();
+  const total = list.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (currentPage > pages) currentPage = 1;
+
+  const counts = {};
+  STATUSES.forEach(s => counts[s] = 0);
+  data.forEach(g => counts[g.status]++);
+  const totalH = data.reduce((a,g) => a+g.hours, 0);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-label">Total games</div><div class="stat-val">${data.length.toLocaleString()}</div></div>
+    <div class="stat"><div class="stat-label">Hours played</div><div class="stat-val">${Math.round(totalH).toLocaleString()}</div></div>
+    <div class="stat"><div class="stat-label">Playing</div><div class="stat-val">${counts.playing}</div></div>
+    <div class="stat"><div class="stat-label">Shelved</div><div class="stat-val">${counts.shelved}</div></div>
+    <div class="stat"><div class="stat-label">Completed</div><div class="stat-val">${counts.completed}</div></div>
+    <div class="stat"><div class="stat-label">Dropped</div><div class="stat-val">${counts.dropped}</div></div>
+    <div class="stat"><div class="stat-label">Unplayed</div><div class="stat-val">${counts.unplayed}</div></div>`;
+
+  document.getElementById('filter-row').innerHTML =
+    ['all',...STATUSES].map(s =>
+      `<button class="fbtn${filterStatus===s?' active':''}" data-f="${s}">${s==='all'?`All (${data.length})`:S_LABELS[s]+' ('+counts[s]+')'}</button>`
+    ).join('') + `<span class="count-lbl">${total} shown</span>`;
+
+  document.querySelectorAll('.fbtn').forEach(b => b.addEventListener('click', () => {
+    filterStatus = b.dataset.f; currentPage = 1; render();
+  }));
+
+  const start = (currentPage-1)*PAGE_SIZE;
+  const page = list.slice(start, start+PAGE_SIZE);
+
+  document.getElementById('game-list').innerHTML = page.map(g => {
+    const safe = g.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return `<div class="gc${g.isNew?' is-new':''}">
+      <div class="bar-bg"><div class="bar-fill" style="width:${Math.max(1,Math.round(g.hours/maxHours*100))}%;background:${barColor(g.hours)}"></div></div>
+      <div class="gname" title="${safe}">${g.name}${g.isNew?'<span class="tag-new">custom</span>':''}</div>
+      <span class="ghrs" title="Click to edit hours" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;" onclick="editHours('${safe}')">${fmtHours(g.hours)}</span>
+      <button class="sbadge s-${g.status}" onclick="cycle('${safe}')" title="Click to cycle status">${S_LABELS[g.status]}</button>
+    </div>`;
+  }).join('');
+
+  document.getElementById('game-count').textContent = data.length.toLocaleString();
+
+  const pr = document.getElementById('page-row');
+  if (pages <= 1) { pr.innerHTML = ''; return; }
+  let btns = `<button class="pbtn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹ Prev</button>`;
+  const range = [];
+  for (let i=1; i<=pages; i++) {
+    if (i===1||i===pages||Math.abs(i-currentPage)<=2) range.push(i);
+    else if (range[range.length-1]!=='…') range.push('…');
+  }
+  range.forEach(p => {
+    if (p==='…') btns += `<span class="page-info" style="padding:0 4px">…</span>`;
+    else btns += `<button class="pbtn${p===currentPage?' active':''}" onclick="goPage(${p})">${p}</button>`;
+  });
+  btns += `<button class="pbtn" onclick="goPage(${currentPage+1})" ${currentPage===pages?'disabled':''}>Next ›</button>`;
+  btns += `<span class="page-info" style="margin-left:8px">${start+1}–${Math.min(start+PAGE_SIZE,total)} of ${total}</span>`;
+  pr.innerHTML = btns;
+}
+
+window.goPage = function(p) { currentPage = p; window.scrollTo(0,0); render(); };
+window.cycle = cycle;
+
+function openAddModal() {
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-hours').value = '';
+  document.getElementById('new-status').value = 'playing';
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('new-name').focus(), 50);
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+window.openAddModal = openAddModal;
+window.closeModal = closeModal;
+
+window.editHours = function(name) {
+  const g = data.find(x => x.name === name);
+  if (!g) return;
+  const current = g.hours || 0;
+  const input = prompt(`Update hours played for "${g.name}":`, current);
+  if (input === null) return;
+  const val = parseFloat(input);
+  if (isNaN(val) || val < 0) { alert('Please enter a valid number of hours.'); return; }
+  g.hours = val;
+  saveData(); render();
+};
+
+window.addGame = function() {
+  const name = document.getElementById('new-name').value.trim();
+  if (!name) return;
+  const hours = parseFloat(document.getElementById('new-hours').value) || 0;
+  const status = document.getElementById('new-status').value;
+  if (data.find(g => g.name.toLowerCase() === name.toLowerCase())) {
+    alert('A game with that name already exists!'); return;
+  }
+  data.unshift({ name, hours, status, isNew: true });
+  saveData(); closeModal(); currentPage = 1; render();
+};
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+window.exportCSV = function() {
+  const header = 'Name,Hours,Status\n';
+  const rows = [...data].sort((a,b)=>a.name.localeCompare(b.name))
+    .map(g => `"${g.name.replace(/"/g,'""')}",${g.hours},${g.status}`).join('\n');
+  const blob = new Blob([header+rows], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'game_backlog.csv';
+  a.click();
+};
+
+document.getElementById('search').addEventListener('input', () => { currentPage=1; render(); });
+document.getElementById('sort').addEventListener('change', () => { currentPage=1; render(); });
+
+render();
+</script>
+</body>
+</html>
